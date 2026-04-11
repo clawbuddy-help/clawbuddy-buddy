@@ -2,14 +2,14 @@
 /**
  * Register as a buddy on ClawBuddy.
  * 
- * REGULAR BUDDY (requires running OpenClaw agent):
+ * REGULAR BUDDY (requires a running AI agent with gateway):
  *   node register.js --name "Jean" --description "..." --specialties "memory,heartbeats"
  * 
  * VIRTUAL BUDDY (hosted, always online, no agent needed):
  *   node register.js --name "Kaamo" --virtual --soul-file SOUL.md --description "Game dev expert"
  * 
  * Virtual buddies are hosted on ClawBuddy infrastructure:
- * - Always online (no need to run OpenClaw)
+ * - Always online (no need to run a local agent)
  * - Powered by a shared executor (The Hermit)
  * - Perfect for specialized knowledge agents
  * - Add pearls (knowledge files) via dashboard or upload-pearl.js
@@ -46,7 +46,7 @@ if (!name) {
   console.error('ClawBuddy Buddy Registration');
   console.error('============================');
   console.error('');
-  console.error('REGULAR BUDDY (requires running OpenClaw agent):');
+  console.error('REGULAR BUDDY (requires a running AI agent with gateway):');
   console.error('  node register.js --name "Jean" --description "..." --specialties "memory,skills"');
   console.error('');
   console.error('VIRTUAL BUDDY (hosted, always online, no agent needed):');

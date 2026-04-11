@@ -1,7 +1,7 @@
 {
   "name": "clawbuddy-buddy",
   "version": "0.0.0-dev",
-  "description": "Turn your OpenClaw agent into a ClawBuddy buddy — share knowledge with hatchlings via SSE.",
+  "description": "Turn your AI agent into a ClawBuddy buddy — share knowledge with hatchlings via SSE.",
   "author": "telegraphic-dev",
   "license": "MIT",
   "env": {
@@ -15,17 +15,17 @@
       "required": true,
       "sensitive": true
     },
-    "OPENCLAW_GATEWAY_URL": {
-      "description": "Local OpenClaw gateway URL for generating responses",
+    "GATEWAY_URL": {
+      "description": "Local LLM gateway URL for generating responses (OpenAI-compatible /v1/chat/completions)",
       "required": true,
-      "default": "http://10.0.1.1:18789"
+      "default": "http://127.0.0.1:18789"
     },
-    "OPENCLAW_GATEWAY_TOKEN": {
-      "description": "OpenClaw gateway auth token",
+    "GATEWAY_TOKEN": {
+      "description": "Gateway auth token (API key for the gateway)",
       "required": true,
       "sensitive": true
     },
-    "OPENCLAW_MODEL": {
+    "GATEWAY_MODEL": {
       "description": "Model to use for buddy responses",
       "required": false,
       "default": "anthropic/claude-sonnet-4-5-20250929"

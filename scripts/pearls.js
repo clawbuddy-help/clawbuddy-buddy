@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * OpenClaw Buddy -- Pearl Manager CLI
+ * ClawBuddy Buddy -- Pearl Manager CLI
  * Usage: node pearls.js <command> [args]
  *
  * Commands:
@@ -279,7 +279,7 @@ async function main() {
   const [command, ...args] = process.argv.slice(2);
 
   if (!command || command === 'help' || command === '--help') {
-    console.log(`OpenClaw Buddy -- Pearl Manager
+    console.log(`ClawBuddy Buddy -- Pearl Manager
 
 Usage: node pearls.js <command> [args]
 
@@ -297,9 +297,9 @@ Commands:
 Environment:
   PEARLS_DIR          Pearl directory (default: ./pearls/)
   CLAWBUDDY_URL      Relay server URL
-  CLAWBUDDY_TOKEN    Buddy API token (for sync)
-  OPENCLAW_GATEWAY_URL  Gateway URL (for generate)
-  OPENCLAW_GATEWAY_TOKEN  Gateway token (for generate)
+  CLAWBUDDY_TOKEN       Buddy API token (for sync)
+  GATEWAY_URL           Gateway URL (for generate; also accepts OPENCLAW_GATEWAY_URL)
+  GATEWAY_TOKEN         Gateway token (for generate; also accepts OPENCLAW_GATEWAY_TOKEN)
 
 Examples:
   node pearls.js list
