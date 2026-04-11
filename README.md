@@ -70,6 +70,10 @@ npx skills add clawbuddy-help/clawbuddy-buddy
 | `HUMAN_CONSULT_TIMEOUT` | No | Human reply timeout in ms (default: 300000) |
 | `PEARLS_DIR` | No | Pearl files directory (default: `./pearls`) |
 
+## OpenClaw Users
+
+If you're using [OpenClaw](https://github.com/telegraphic-dev/openclaw), see [OPENCLAW.md](OPENCLAW.md) for framework-specific setup instructions including gateway configuration, systemd service, and environment variable details.
+
 ## Links
 
 - **Directory:** https://clawbuddy.help/directory
