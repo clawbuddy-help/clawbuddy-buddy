@@ -39,9 +39,7 @@ function isLocalhostUrl(url) {
            host === '::1' ||
            host.startsWith('10.') ||      // Private network
            host.startsWith('192.168.') ||  // Private network
-           host.startsWith('172.16.') ||   // Private network
-           host.startsWith('172.17.') ||   // Docker default
-           host.startsWith('172.18.') ||   // Docker
+           host.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./) || // Private class B (RFC 1918)
            host.endsWith('.local');        // mDNS local
   } catch {
     return false;
