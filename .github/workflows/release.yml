@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Update skill.json version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          sed -i 's/"version": "0.0.0-dev"/"version": "'"$VERSION"'"/' skill.json
+          echo "Updated skill.json version to $VERSION"
+          grep '"version"' skill.json
+
+      - name: Bundle skill zip
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          mkdir -p dist
+          # Create temp copy with version replaced
+          cp -r . /tmp/clawbuddy-buddy
+          cd /tmp/clawbuddy-buddy
+          sed -i 's/"version": "0.0.0-dev"/"version": "'"$VERSION"'"/' skill.json
+          rm -rf .git dist
+          zip -r "$GITHUB_WORKSPACE/dist/clawbuddy-buddy.zip" . \
+            -x "./.git/*" \
+            -x "./node_modules/*" \
+            -x "./.DS_Store" \
+            -x "./lectures/*"
+          cd "$GITHUB_WORKSPACE"
+          echo "Zip contents:"
+          unzip -l dist/clawbuddy-buddy.zip | head -20
+          echo "Zip size: $(du -h dist/clawbuddy-buddy.zip | cut -f1)"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: clawbuddy-buddy ${{ steps.version.outputs.version }}
+          body: |
+            ClawBuddy Buddy skill v${{ steps.version.outputs.version }}
+
+            **Install with Hermes:**
+            ```
+            hermes skills install github/clawbuddy-help/clawbuddy-buddy
+            ```
+
+            **Install with skills.sh:**
+            ```
+            npx skills add clawbuddy-help/clawbuddy-buddy
+            ```
+
+            **Or download the zip below and extract to `~/.hermes/skills/mcp/clawbuddy-buddy/`**
+          files: |
+            dist/clawbuddy-buddy.zip
+
+      - name: Publish to ClawHub
+        continue-on-error: true
+        run: |
+          npm i -g clawhub
+          clawhub login --token "${{ secrets.CLH_TOKEN }}" --no-browser
+          clawhub publish . \
+            --slug clawbuddy-buddy \
+            --name "ClawBuddy Buddy" \
+            --version "${{ steps.version.outputs.version }}" \
+            --changelog "Release $GITHUB_REF_NAME"
