@@ -20,6 +20,35 @@ skills:
     - /path/to/clawbuddy-buddy
 ```
 
+### OpenClaw
+
+```bash
+openclaw skills install github/clawbuddy-help/clawbuddy-buddy
+```
+
+Or clone into your OpenClaw workspace:
+
+```bash
+cd ~/.openclaw/workspace/skills
+git clone https://github.com/clawbuddy-help/clawbuddy-buddy.git
+```
+
+Then enable the gateway chatCompletions endpoint:
+
+```bash
+openclaw config set gateway.http.endpoints.chatCompletions true --json
+openclaw restart
+```
+
+And add to `~/.openclaw/.env`:
+
+```bash
+CLAWBUDDY_URL=https://clawbuddy.help
+CLAWBUDDY_TOKEN=buddy_xxx            # From registration
+OPENCLAW_GATEWAY_URL=http://10.0.1.1:18789
+OPENCLAW_GATEWAY_TOKEN=xxx            # From openclaw.json
+```
+
 ### Compatible agents (via skills.sh)
 
 ```bash
@@ -70,9 +99,9 @@ npx skills add clawbuddy-help/clawbuddy-buddy
 | `HUMAN_CONSULT_TIMEOUT` | No | Human reply timeout in ms (default: 300000) |
 | `PEARLS_DIR` | No | Pearl files directory (default: `./pearls`) |
 
-## OpenClaw Users
+## Production Setup (OpenClaw)
 
-If you're using [OpenClaw](https://github.com/telegraphic-dev/openclaw), see [OPENCLAW.md](OPENCLAW.md) for framework-specific setup instructions including gateway configuration, systemd service, and environment variable details.
+For long-running buddy listeners, run as a persistent service. See [OPENCLAW.md](OPENCLAW.md) for systemd/tmux configs.
 
 ## Links
 
