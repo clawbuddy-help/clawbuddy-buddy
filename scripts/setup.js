@@ -13,7 +13,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { execSync } from 'child_process';
+import os from 'os';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,15 +30,15 @@ function warn(msg) { console.log(`  \x1b[33m⚠\x1b[0m ${msg}`); warnings++; }
 function fail(msg) { console.log(`  \x1b[31m✗\x1b[0m ${msg}`); errors++; }
 function info(msg) { console.log(`    ${msg}`); }
 
-// ── Load .env ─────────────────────────────────────────────────────
+// ── Load .env from skill dir, cwd, ~/.hermes/, ~/.openclaw/, or home ──
 
 function loadEnv() {
   const candidates = [
     path.join(SKILL_DIR, '.env'),
     path.join(process.cwd(), '.env'),
-    path.join(process.env.HOME || '', '.hermes', '.env'),
-    path.join(process.env.HOME || '', '.openclaw', '.env'),
-    path.join(process.env.HOME || '', '.env'),
+    path.join(os.homedir(), '.hermes', '.env'),
+    path.join(os.homedir(), '.openclaw', '.env'),
+    path.join(os.homedir(), '.env'),
   ];
 
   for (const envPath of candidates) {
@@ -53,7 +53,7 @@ function loadEnv() {
         const key = trimmed.slice(0, eqIdx).trim();
         const val = trimmed.slice(eqIdx + 1).trim();
         // Only set if not already defined in environment
-        if (!process.env[key]) {
+        if (process.env[key] === undefined) {
           process.env[key] = val;
         }
       }
@@ -119,7 +119,7 @@ function checkRequiredVars() {
 
 function checkHermesConfig() {
   console.log('\n\x1b[1mHermes Configuration\x1b[0m');
-  const hermesConfigPath = path.join(process.env.HOME || '', '.hermes', 'config.yaml');
+  const hermesConfigPath = path.join(os.homedir(), '.hermes', 'config.yaml');
 
   if (!fs.existsSync(hermesConfigPath)) {
     info('No Hermes config found at ~/.hermes/config.yaml');
@@ -157,7 +157,7 @@ function checkHermesConfig() {
     }
 
     // Check for api_key
-    const hermesEnvPath = path.join(process.env.HOME || '', '.hermes', '.env');
+    const hermesEnvPath = path.join(os.homedir(), '.hermes', '.env');
     if (fs.existsSync(hermesEnvPath)) {
       const envContent = fs.readFileSync(hermesEnvPath, 'utf-8');
       if (/API_SERVER_KEY\s*=/.test(envContent)) {
@@ -176,6 +176,24 @@ function checkHermesConfig() {
 
 // ── 4. Gateway connectivity ───────────────────────────────────────
 
+// Security: check if a URL points to a localhost or private network address.
+// The auth token should never be sent to remote hosts.
+function isLocalhostUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    return host === 'localhost' ||
+           host === '127.0.0.1' ||
+           host === '::1' ||
+           host.startsWith('10.') ||                // Private network
+           host.startsWith('192.168.') ||            // Private network
+           host.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./) !== null || // Private class B (RFC 1918)
+           host.endsWith('.local');                   // mDNS local
+  } catch {
+    return false;
+  }
+}
+
 async function checkGatewayConnectivity() {
   console.log('\n\x1b[1mGateway Connectivity\x1b[0m');
 
@@ -187,18 +205,28 @@ async function checkGatewayConnectivity() {
 
   const gatewayToken = process.env.GATEWAY_TOKEN || process.env.OPENCLAW_GATEWAY_TOKEN || '';
 
+  // Security: do not send the auth token to remote hosts
+  const isLocal = isLocalhostUrl(gatewayUrl);
+  let safeToken = gatewayToken;
+  if (!isLocal && gatewayToken) {
+    warn('GATEWAY_URL appears to be a remote host — skipping auth token for security');
+    safeToken = '';
+  }
+
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
-    const res = await fetch(`${gatewayUrl}/v1/models`, {
-      headers: gatewayToken ? { 'Authorization': `Bearer ${gatewayToken}` } : {},
+    // Use URL constructor to properly join path even if base has a pathname
+    const modelsUrl = new URL('/v1/models', gatewayUrl).toString();
+    const res = await fetch(modelsUrl, {
+      headers: safeToken ? { 'Authorization': `Bearer ${safeToken}` } : {},
       signal: controller.signal,
     });
     clearTimeout(timeout);
 
     if (res.ok) {
-      ok(`Gateway responded at ${gatewayUrl}/v1/models`);
+      ok(`Gateway responded at ${modelsUrl}`);
       try {
         const data = await res.json();
         const modelCount = data.data?.length || 0;
@@ -229,7 +257,7 @@ function checkPearls() {
   console.log('\n\x1b[1mPearls Directory\x1b[0m');
 
   const pearlsDir = process.env.PEARLS_DIR
-    ? path.resolve(process.env.PEARLS_DIR)
+    ? path.resolve(SKILL_DIR, process.env.PEARLS_DIR)
     : path.join(SKILL_DIR, 'pearls');
 
   if (!fs.existsSync(pearlsDir)) {
@@ -298,6 +326,7 @@ async function main() {
     console.log('  node scripts/listen.js');
   } else {
     console.log(`\x1b[31m${errors} error(s), ${warnings} warning(s).\x1b[0m Fix the errors above before running.`);
+    process.exitCode = 1;
   }
   console.log('');
 }

@@ -152,7 +152,7 @@ async function main() {
     console.log('└──────────────────────────────────────────────────────────────┘');
     console.log('');
     console.log('Add to your .env:');
-    console.log(`  CLAWBUDDY_TOKEN=${data.token}`);
+    console.log('  CLAWBUDDY_TOKEN=<your-token>');
     console.log('');
     if (data.claim_url) {
       console.log('┌──────────────────────────────────────────────────────────────┐');
@@ -183,7 +183,7 @@ async function main() {
     console.log('└──────────────────────────────────────────────────────────────┘');
     console.log('');
     console.log('Add to your .env:');
-    console.log(`  CLAWBUDDY_TOKEN=${data.token}`);
+    console.log('  CLAWBUDDY_TOKEN=<your-token>');
     console.log('');
     if (data.claim_url) {
       console.log('┌──────────────────────────────────────────────────────────────┐');
