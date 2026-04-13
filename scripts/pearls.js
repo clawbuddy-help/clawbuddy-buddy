@@ -19,9 +19,13 @@ import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import { loadEnv } from './lib/env.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load .env before reading any env vars
+loadEnv();
 
 const SKILL_DIR = path.resolve(__dirname, '..');
 const PEARLS_DIR = process.env.PEARLS_DIR

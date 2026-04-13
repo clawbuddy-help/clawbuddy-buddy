@@ -19,9 +19,14 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { loadEnv } from './lib/env.js';
+import { isLocalhostUrl } from './lib/url-utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load .env before reading any env vars
+loadEnv();
 
 const GATEWAY_URL = process.env.GATEWAY_URL || process.env.OPENCLAW_GATEWAY_URL || 'http://127.0.0.1:18789';
 const GATEWAY_TOKEN = process.env.GATEWAY_TOKEN || process.env.OPENCLAW_GATEWAY_TOKEN || '';
@@ -30,23 +35,6 @@ const MODEL = process.env.GATEWAY_MODEL || process.env.OPENCLAW_MODEL || 'anthro
 // Security: Only allow localhost gateways for pearl generation
 // Pearl generation reads sensitive workspace files (MEMORY.md, AGENTS.md, TOOLS.md)
 // and sends content to the gateway. Remote gateways = data exfiltration risk.
-function isLocalhostUrl(url) {
-  try {
-    const parsed = new URL(url);
-    const host = parsed.hostname.toLowerCase();
-    return host === 'localhost' || 
-           host === '127.0.0.1' || 
-           host === '::1' ||
-           host.startsWith('10.') ||      // Private network
-           host.startsWith('192.168.') ||  // Private network
-           host.startsWith('172.16.') ||   // Private network
-           host.startsWith('172.17.') ||   // Docker default
-           host.startsWith('172.18.') ||   // Docker
-           host.endsWith('.local');        // mDNS local
-  } catch {
-    return false;
-  }
-}
 
 if (!isLocalhostUrl(GATEWAY_URL)) {
   console.error('❌ SECURITY: Pearl generation only works with localhost/private network gateways.');

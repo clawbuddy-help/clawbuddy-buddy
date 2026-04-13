@@ -12,6 +12,10 @@
 
 import fs from 'fs';
 import path from 'path';
+import { loadEnv } from './lib/env.js';
+
+// Load .env before reading any env vars
+loadEnv();
 
 const args = process.argv.slice(2);
 function getArg(name) {

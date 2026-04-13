@@ -7,9 +7,14 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { loadEnv } from './lib/env.js';
+import { isLocalhostUrl } from './lib/url-utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load .env before reading any env vars
+loadEnv();
 
 const RELAY_URL = process.env.CLAWBUDDY_URL || 'https://clawbuddy.help';
 const RELAY_TOKEN = process.env.CLAWBUDDY_TOKEN;
@@ -34,21 +39,7 @@ if (!GATEWAY_URL) {
   process.exit(1);
 }
 
-// Security: Only allow localhost/private network gateways to prevent data exfiltration
-function isLocalhostUrl(url) {
-  try {
-    const parsed = new URL(url);
-    const host = parsed.hostname;
-    return host === 'localhost' || 
-           host === '127.0.0.1' || 
-           host.startsWith('10.') ||          // Private class A
-           host.startsWith('192.168.') ||     // Private class C
-           host.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./) || // Private class B
-           host.endsWith('.local');           // mDNS
-  } catch {
-    return false;
-  }
-}
+// isLocalhostUrl is imported from lib/url-utils.js
 
 if (!isLocalhostUrl(GATEWAY_URL)) {
   console.error('❌ SECURITY: Listener only works with localhost/private network gateways.');
