@@ -17,6 +17,11 @@
  *   node report.js abc123 abuse "Sending threatening messages"
  */
 
+import { loadEnv } from './lib/env.js';
+
+// Load .env before reading any env vars
+loadEnv();
+
 const CLAWBUDDY_URL = process.env.CLAWBUDDY_URL || 'https://clawbuddy.help';
 const CLAWBUDDY_TOKEN = process.env.CLAWBUDDY_TOKEN;
 

@@ -14,6 +14,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
+import { loadEnv } from './lib/env.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,38 +31,7 @@ function warn(msg) { console.log(`  \x1b[33m⚠\x1b[0m ${msg}`); warnings++; }
 function fail(msg) { console.log(`  \x1b[31m✗\x1b[0m ${msg}`); errors++; }
 function info(msg) { console.log(`    ${msg}`); }
 
-// ── Load .env from skill dir, cwd, ~/.hermes/, ~/.openclaw/, or home ──
-
-function loadEnv() {
-  const candidates = [
-    path.join(SKILL_DIR, '.env'),
-    path.join(process.cwd(), '.env'),
-    path.join(os.homedir(), '.hermes', '.env'),
-    path.join(os.homedir(), '.openclaw', '.env'),
-    path.join(os.homedir(), '.env'),
-  ];
-
-  for (const envPath of candidates) {
-    if (fs.existsSync(envPath)) {
-      console.log(`Loading env from: ${envPath}`);
-      const content = fs.readFileSync(envPath, 'utf-8');
-      for (const line of content.split('\n')) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith('#')) continue;
-        const eqIdx = trimmed.indexOf('=');
-        if (eqIdx < 0) continue;
-        const key = trimmed.slice(0, eqIdx).trim();
-        const val = trimmed.slice(eqIdx + 1).trim();
-        // Only set if not already defined in environment
-        if (process.env[key] === undefined) {
-          process.env[key] = val;
-        }
-      }
-      return;
-    }
-  }
-  console.log('No .env file found in standard locations.');
-}
+// ── .env loading is handled by lib/env.js (imported above) ──
 
 // ── 1. Node.js version ────────────────────────────────────────────
 
@@ -136,20 +106,24 @@ function checkHermesConfig() {
     if (config.includes('api_server')) {
       ok('api_server section found');
 
-      // Try to extract port
-      const portMatch = config.match(/port:\s*(\d+)/);
+      // Extract the api_server block (indented lines after "api_server:")
+      const apiServerMatch = config.match(/api_server:\s*\n((?:\s+.*\n?)*)/);
+      const apiServerBlock = apiServerMatch ? apiServerMatch[1] : '';
+
+      // Try to extract port from the api_server block
+      const portMatch = apiServerBlock.match(/port:\s*(\d+)/);
       if (portMatch) {
         ok(`API server port: ${portMatch[1]}`);
       } else {
         warn('Could not detect api_server port — default may be used');
       }
 
-      // Check if enabled
-      if (/enabled:\s*true/i.test(config) || !/enabled:\s*false/i.test(config)) {
-        ok('API server appears enabled');
-      } else {
+      // Check if enabled (only within the api_server block)
+      if (/enabled:\s*false/i.test(apiServerBlock)) {
         fail('API server appears disabled (enabled: false)');
         info('Set enabled: true in the api_server section of ~/.hermes/config.yaml');
+      } else {
+        ok('API server appears enabled');
       }
     } else {
       warn('No api_server section in config');
@@ -213,16 +187,18 @@ async function checkGatewayConnectivity() {
     safeToken = '';
   }
 
+  const headers = safeToken ? { 'Authorization': `Bearer ${safeToken}` } : {};
+
+  // Try /v1/models first (standard endpoint), fall back to /v1/chat/completions probe.
+  // Some gateways don't implement /v1/models but the buddy only needs /v1/chat/completions.
+  const modelsUrl = new URL('/v1/models', gatewayUrl).toString();
+  const completionsUrl = new URL('/v1/chat/completions', gatewayUrl).toString();
+
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
-    // Use URL constructor to properly join path even if base has a pathname
-    const modelsUrl = new URL('/v1/models', gatewayUrl).toString();
-    const res = await fetch(modelsUrl, {
-      headers: safeToken ? { 'Authorization': `Bearer ${safeToken}` } : {},
-      signal: controller.signal,
-    });
+    let res = await fetch(modelsUrl, { headers, signal: controller.signal });
     clearTimeout(timeout);
 
     if (res.ok) {
@@ -233,6 +209,20 @@ async function checkGatewayConnectivity() {
         info(`${modelCount} model(s) available`);
       } catch {
         // Non-critical
+      }
+    } else if (res.status === 404 || res.status === 405) {
+      // /v1/models not available — probe /v1/chat/completions instead
+      const controller2 = new AbortController();
+      const timeout2 = setTimeout(() => controller2.abort(), 5000);
+      // Minimal OPTIONS or GET to check the endpoint exists
+      let res2 = await fetch(completionsUrl, { headers, method: 'OPTIONS', signal: controller2.signal })
+        .catch(() => null);
+      clearTimeout(timeout2);
+      if (res2 && (res2.ok || res2.status === 405 || res2.status === 401)) {
+        ok(`Gateway reachable (using ${completionsUrl})`);
+      } else {
+        warn(`/v1/models not available and /v1/chat/completions probe failed`);
+        info('Gateway may not be fully compatible — buddy runtime may still work');
       }
     } else {
       fail(`Gateway returned ${res.status} ${res.statusText}`);

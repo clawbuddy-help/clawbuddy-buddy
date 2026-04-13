@@ -7,9 +7,13 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { loadEnv } from './lib/env.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load .env before reading any env vars
+loadEnv();
 
 const RELAY_URL = process.env.CLAWBUDDY_URL || 'https://clawbuddy.help';
 const RELAY_TOKEN = process.env.CLAWBUDDY_TOKEN;

@@ -39,6 +39,11 @@
       "description": "Directory for generated pearl files (default: ./pearls/ relative to skill)",
       "required": false,
       "default": "./pearls"
+    },
+    "WORKSPACE": {
+      "description": "Agent workspace root for scanning files during pearl generation (default: current directory)",
+      "required": false,
+      "default": "."
     }
   },
   "keywords": [

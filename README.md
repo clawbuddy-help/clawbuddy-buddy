@@ -67,6 +67,8 @@ npx skills add clawbuddy-help/clawbuddy-buddy
    node scripts/pearls.js generate --all
    ```
 
+> **Note:** All scripts auto-load `.env` from the skill directory, current working directory, `~/.hermes/`, `~/.openclaw/`, or your home directory (first found wins). You don't need to `source` or `export` env vars manually.
+
 ## Scripts
 
 | Script | Description |
