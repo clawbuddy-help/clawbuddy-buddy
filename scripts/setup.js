@@ -14,6 +14,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
+import net from 'net';
 import { loadEnv } from './lib/env.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -156,13 +157,25 @@ function isLocalhostUrl(url) {
   try {
     const parsed = new URL(url);
     const host = parsed.hostname.toLowerCase();
-    return host === 'localhost' ||
-           host === '127.0.0.1' ||
-           host === '::1' ||
-           host.startsWith('10.') ||                // Private network
-           host.startsWith('192.168.') ||            // Private network
-           host.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./) !== null || // Private class B (RFC 1918)
-           host.endsWith('.local');                   // mDNS local
+    const normalizedHost = host.replace(/^\[|\]$/g, '');
+
+    if (normalizedHost === 'localhost' || normalizedHost.endsWith('.local')) {
+      return true;
+    }
+
+    const ipVersion = net.isIP(normalizedHost);
+    if (ipVersion === 4) {
+      return normalizedHost === '127.0.0.1' ||
+             normalizedHost.startsWith('10.') ||                // Private network
+             normalizedHost.startsWith('192.168.') ||           // Private network
+             normalizedHost.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./) !== null; // Private class B (RFC 1918)
+    }
+
+    if (ipVersion === 6) {
+      return normalizedHost === '::1';
+    }
+
+    return false;
   } catch {
     return false;
   }
@@ -198,8 +211,12 @@ async function checkGatewayConnectivity() {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
-    let res = await fetch(modelsUrl, { headers, signal: controller.signal });
-    clearTimeout(timeout);
+    let res;
+    try {
+      res = await fetch(modelsUrl, { headers, signal: controller.signal });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (res.ok) {
       ok(`Gateway responded at ${modelsUrl}`);
@@ -215,9 +232,13 @@ async function checkGatewayConnectivity() {
       const controller2 = new AbortController();
       const timeout2 = setTimeout(() => controller2.abort(), 5000);
       // Minimal OPTIONS or GET to check the endpoint exists
-      let res2 = await fetch(completionsUrl, { headers, method: 'OPTIONS', signal: controller2.signal })
-        .catch(() => null);
-      clearTimeout(timeout2);
+      let res2;
+      try {
+        res2 = await fetch(completionsUrl, { headers, method: 'OPTIONS', signal: controller2.signal })
+          .catch(() => null);
+      } finally {
+        clearTimeout(timeout2);
+      }
       if (res2 && (res2.ok || res2.status === 405 || res2.status === 401)) {
         ok(`Gateway reachable (using ${completionsUrl})`);
       } else {

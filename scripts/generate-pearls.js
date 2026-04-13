@@ -17,6 +17,7 @@
  */
 
 import fs from 'fs';
+import net from 'net';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { loadEnv } from './lib/env.js';
@@ -34,17 +35,37 @@ const MODEL = process.env.GATEWAY_MODEL || process.env.OPENCLAW_MODEL || 'anthro
 // Security: Only allow localhost gateways for pearl generation
 // Pearl generation reads sensitive workspace files (MEMORY.md, AGENTS.md, TOOLS.md)
 // and sends content to the gateway. Remote gateways = data exfiltration risk.
+function isPrivateOrLoopbackIpv4(host) {
+  const parts = host.split('.').map(Number);
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
+    return false;
+  }
+
+  return parts[0] === 127 || // Loopback
+         parts[0] === 10 || // RFC 1918: 10.0.0.0/8
+         (parts[0] === 192 && parts[1] === 168) || // RFC 1918: 192.168.0.0/16
+         (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31); // RFC 1918: 172.16.0.0/12
+}
+
 function isLocalhostUrl(url) {
   try {
     const parsed = new URL(url);
     const host = parsed.hostname.toLowerCase();
-    return host === 'localhost' || 
-           host === '127.0.0.1' || 
-           host === '::1' ||
-           host.startsWith('10.') ||      // Private network
-           host.startsWith('192.168.') ||  // Private network
-           host.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./) || // Private class B (RFC 1918)
-           host.endsWith('.local');        // mDNS local
+
+    if (host === 'localhost' || host === '::1') {
+      return true;
+    }
+
+    const ipVersion = net.isIP(host);
+    if (ipVersion === 4) {
+      return isPrivateOrLoopbackIpv4(host);
+    }
+
+    if (ipVersion === 6) {
+      return host === '::1';
+    }
+
+    return false;
   } catch {
     return false;
   }

@@ -16,7 +16,32 @@ import os from 'os';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const SKILL_DIR = path.resolve(__dirname, '..');
+const SKILL_DIR = path.resolve(__dirname, '..', '..');
+
+function stripInlineComment(val) {
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+
+  for (let i = 0; i < val.length; i++) {
+    const ch = val[i];
+
+    if (ch === "'" && !inDoubleQuote) {
+      inSingleQuote = !inSingleQuote;
+      continue;
+    }
+
+    if (ch === '"' && !inSingleQuote) {
+      inDoubleQuote = !inDoubleQuote;
+      continue;
+    }
+
+    if (ch === '#' && !inSingleQuote && !inDoubleQuote) {
+      return val.slice(0, i).trim();
+    }
+  }
+
+  return val.trim();
+}
 
 export function loadEnv({ silent = false } = {}) {
   const candidates = [
@@ -41,13 +66,7 @@ export function loadEnv({ silent = false } = {}) {
         let key = trimmed.slice(0, eqIdx).trim();
         let val = trimmed.slice(eqIdx + 1).trim();
         // Remove inline comments (# not inside quotes)
-        if (val.includes('#')) {
-          const stripped = val.replace(/(?:'[^']*'|"[^"]*")/g, '');
-          const commentIdx = stripped.indexOf('#');
-          if (commentIdx >= 0) {
-            val = val.slice(0, val.indexOf('#', stripped.indexOf('#') > 0 ? 0 : 0)).trim();
-          }
-        }
+        val = stripInlineComment(val);
         // Unquote values: "foo" or 'foo' → foo
         if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
           val = val.slice(1, -1);
