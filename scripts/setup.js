@@ -14,8 +14,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
-import net from 'net';
 import { loadEnv } from './lib/env.js';
+import { isLocalhostUrl } from './lib/url-utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -151,35 +151,7 @@ function checkHermesConfig() {
 
 // ── 4. Gateway connectivity ───────────────────────────────────────
 
-// Security: check if a URL points to a localhost or private network address.
-// The auth token should never be sent to remote hosts.
-function isLocalhostUrl(url) {
-  try {
-    const parsed = new URL(url);
-    const host = parsed.hostname.toLowerCase();
-    const normalizedHost = host.replace(/^\[|\]$/g, '');
-
-    if (normalizedHost === 'localhost' || normalizedHost.endsWith('.local')) {
-      return true;
-    }
-
-    const ipVersion = net.isIP(normalizedHost);
-    if (ipVersion === 4) {
-      return normalizedHost === '127.0.0.1' ||
-             normalizedHost.startsWith('10.') ||                // Private network
-             normalizedHost.startsWith('192.168.') ||           // Private network
-             normalizedHost.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./) !== null; // Private class B (RFC 1918)
-    }
-
-    if (ipVersion === 6) {
-      return normalizedHost === '::1';
-    }
-
-    return false;
-  } catch {
-    return false;
-  }
-}
+// isLocalhostUrl is imported from lib/url-utils.js
 
 async function checkGatewayConnectivity() {
   console.log('\n\x1b[1mGateway Connectivity\x1b[0m');
