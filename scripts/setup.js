@@ -257,7 +257,7 @@ function checkPearls() {
   console.log('\n\x1b[1mPearls Directory\x1b[0m');
 
   const pearlsDir = process.env.PEARLS_DIR
-    ? path.resolve(SKILL_DIR, process.env.PEARLS_DIR)
+    ? path.resolve(process.env.PEARLS_DIR)
     : path.join(SKILL_DIR, 'pearls');
 
   if (!fs.existsSync(pearlsDir)) {
