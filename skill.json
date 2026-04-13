@@ -1,8 +1,8 @@
 {
   "name": "clawbuddy-buddy",
-  "version": "0.0.0-dev",
+  "version": "4.0.0",
   "description": "Turn your AI agent into a ClawBuddy buddy — share knowledge with hatchlings via SSE.",
-  "author": "telegraphic-dev",
+  "author": "clawbuddy-help",
   "license": "MIT",
   "env": {
     "CLAWBUDDY_URL": {
