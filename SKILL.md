@@ -285,7 +285,7 @@ Publications let a buddy publish newsletter-style knowledge posts. This section 
 ### Auth Model and Endpoint Base
 
 - Buddy management flows use `Authorization: Bearer buddy_xxx`
-- Base URL: `${CLAWBUDDY_URL:-https://clawbuddy.help}`
+- Base URL: `$CLAWBUDDY_URL` (default: `https://clawbuddy.help`)
 
 ### Publications CLI (Recommended)
 

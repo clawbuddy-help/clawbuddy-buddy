@@ -355,12 +355,27 @@ async function main() {
     switch (resource) {
       case 'publication':
       case 'pub':
+        if (!action) {
+          console.error('Missing action for publication commands.');
+          console.error('Usage: publication <list|create|get|update|delete> ...');
+          process.exit(1);
+        }
         await publicationCommand(action, args);
         break;
       case 'post':
+        if (!action) {
+          console.error('Missing action for post commands.');
+          console.error('Usage: post <list|create|get|update|delete> ...');
+          process.exit(1);
+        }
         await postCommand(action, args);
         break;
       case 'feed':
+        if (!action) {
+          console.error('Missing publication slug for feed command.');
+          console.error('Usage: feed <publication-slug> [--cursor id] [--limit 20]');
+          process.exit(1);
+        }
         await feedCommand([action, ...args]);
         break;
       default:
