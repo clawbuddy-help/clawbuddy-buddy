@@ -26,6 +26,7 @@ const fixMode = args.includes('--fix');
 
 let errors = 0;
 let warnings = 0;
+let detectedHermesPort = null;
 
 function ok(msg) { console.log(`  \x1b[32m✓\x1b[0m ${msg}`); }
 function warn(msg) { console.log(`  \x1b[33m⚠\x1b[0m ${msg}`); warnings++; }
@@ -90,18 +91,23 @@ function checkRequiredVars() {
 
 function checkHermesConfig() {
   console.log('\n\x1b[1mHermes Configuration\x1b[0m');
-  const hermesConfigPath = path.join(os.homedir(), '.hermes', 'config.yaml');
+  const hermesProfile = process.env.HERMES_PROFILE;
+  const hermesHome = process.env.HERMES_HOME
+    || (hermesProfile ? path.join(os.homedir(), '.hermes', 'profiles', hermesProfile) : path.join(os.homedir(), '.hermes'));
+  const hermesConfigPath = path.join(hermesHome, 'config.yaml');
 
   if (!fs.existsSync(hermesConfigPath)) {
-    info('No Hermes config found at ~/.hermes/config.yaml');
-    info('If using Hermes, check that it is installed and configured.');
+    info(`No Hermes config found at ${hermesConfigPath}`);
+    info('If using a named Hermes profile, set HERMES_PROFILE before running this script.');
     return;
   }
 
-  ok('Found ~/.hermes/config.yaml');
+  ok(`Found Hermes config: ${hermesConfigPath}`);
 
   try {
     const config = fs.readFileSync(hermesConfigPath, 'utf-8');
+    const hermesEnvPath = path.join(hermesHome, '.env');
+    const envContent = fs.existsSync(hermesEnvPath) ? fs.readFileSync(hermesEnvPath, 'utf-8') : '';
 
     // Check api_server section
     if (config.includes('api_server')) {
@@ -114,6 +120,7 @@ function checkHermesConfig() {
       // Try to extract port from the api_server block
       const portMatch = apiServerBlock.match(/port:\s*(\d+)/);
       if (portMatch) {
+        detectedHermesPort = portMatch[1];
         ok(`API server port: ${portMatch[1]}`);
       } else {
         warn('Could not detect api_server port — default may be used');
@@ -122,27 +129,31 @@ function checkHermesConfig() {
       // Check if enabled (only within the api_server block)
       if (/enabled:\s*false/i.test(apiServerBlock)) {
         fail('API server appears disabled (enabled: false)');
-        info('Set enabled: true in the api_server section of ~/.hermes/config.yaml');
+        info(`Set enabled: true in the api_server section of ${hermesConfigPath}`);
       } else {
         ok('API server appears enabled');
       }
     } else {
-      warn('No api_server section in config');
-      info('Add an api_server section to enable the gateway');
+      if (/API_SERVER_ENABLED\s*=\s*true/i.test(envContent)) {
+        ok('API_SERVER_ENABLED=true found in Hermes env');
+      } else {
+        warn('No api_server section in config and no API_SERVER_ENABLED=true in env');
+        info('Enable the Hermes API server before starting the buddy listener');
+      }
     }
 
     // Check for api_key
-    const hermesEnvPath = path.join(os.homedir(), '.hermes', '.env');
-    if (fs.existsSync(hermesEnvPath)) {
-      const envContent = fs.readFileSync(hermesEnvPath, 'utf-8');
+    if (envContent) {
+      const envPortMatch = envContent.match(/API_SERVER_PORT\s*=\s*(\d+)/);
+      if (envPortMatch) detectedHermesPort = envPortMatch[1];
       if (/API_SERVER_KEY\s*=/.test(envContent)) {
-        ok('API_SERVER_KEY found in ~/.hermes/.env');
+        ok(`API_SERVER_KEY found in ${hermesEnvPath}`);
       } else {
-        warn('API_SERVER_KEY not found in ~/.hermes/.env');
-        info('Set API_SERVER_KEY in ~/.hermes/.env for gateway auth');
+        warn(`API_SERVER_KEY not found in ${hermesEnvPath}`);
+        info('Set API_SERVER_KEY in the Hermes env file for gateway auth');
       }
     } else {
-      info('No ~/.hermes/.env file found');
+      info(`No Hermes env file found at ${hermesEnvPath}`);
     }
   } catch (err) {
     warn(`Could not parse Hermes config: ${err.message}`);
@@ -159,7 +170,25 @@ async function checkGatewayConnectivity() {
   const gatewayUrl = process.env.GATEWAY_URL || process.env.OPENCLAW_GATEWAY_URL;
   if (!gatewayUrl) {
     fail('No GATEWAY_URL set — skipping connectivity test');
+    if (detectedHermesPort) info(`For Hermes, set GATEWAY_URL=http://127.0.0.1:${detectedHermesPort}`);
     return;
+  }
+
+  if (!process.env.GATEWAY_URL && process.env.OPENCLAW_GATEWAY_URL && detectedHermesPort) {
+    warn('Using OPENCLAW_GATEWAY_URL fallback while Hermes config was detected');
+    info(`For a Hermes buddy, set GATEWAY_URL=http://127.0.0.1:${detectedHermesPort} and GATEWAY_TOKEN=API_SERVER_KEY`);
+  }
+
+  if (detectedHermesPort) {
+    try {
+      const parsedGateway = new URL(gatewayUrl);
+      if (parsedGateway.hostname === '127.0.0.1' || parsedGateway.hostname === 'localhost') {
+        const gatewayPort = parsedGateway.port || (parsedGateway.protocol === 'https:' ? '443' : '80');
+        if (gatewayPort !== String(detectedHermesPort) && !process.env.OPENCLAW_GATEWAY_URL) {
+          warn(`GATEWAY_URL port (${gatewayPort}) differs from detected Hermes API port (${detectedHermesPort})`);
+        }
+      }
+    } catch {}
   }
 
   const gatewayToken = process.env.GATEWAY_TOKEN || process.env.OPENCLAW_GATEWAY_TOKEN || '';

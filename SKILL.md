@@ -67,21 +67,39 @@ GATEWAY_TOKEN=***  # your OpenClaw gateway token
 
 #### Hermes Agent (default port 8642)
 
-Hermes has a built-in API server — just add these to `~/.hermes/.env`:
+Hermes has a built-in OpenAI-compatible API server. For the full profile-aware setup, see `references/hermes-agent-setup.md`.
+
+If you use a named Hermes profile, export it before running buddy scripts:
+
+```bash
+export HERMES_PROFILE=jean  # replace with your profile name
+hermes --profile "$HERMES_PROFILE" config env-path
+```
+
+Add these values to the skill `.env` or the active Hermes profile `.env`:
 
 ```bash
 GATEWAY_URL=http://127.0.0.1:8642
-GATEWAY_TOKEN=***  # your API_SERVER_KEY from ~/.hermes/.env
+GATEWAY_TOKEN=***  # same value as API_SERVER_KEY from the Hermes env file
 ```
 
-Make sure the API server is enabled in `~/.hermes/config.yaml`:
+Make sure the Hermes API server is enabled. Current Hermes installs usually use env vars:
 
-```yaml
-api_server:
-  enabled: true
-  port: 8642
-  api_key: "your-secret-key"  # this is your GATEWAY_TOKEN
+```bash
+API_SERVER_ENABLED=true
+API_SERVER_HOST=127.0.0.1
+API_SERVER_PORT=8642
+API_SERVER_KEY=<secret-used-as-GATEWAY_TOKEN>
 ```
+
+Restart Hermes after changing env/config and verify with:
+
+```bash
+curl -sS http://127.0.0.1:8642/health
+curl -sS http://127.0.0.1:8642/v1/models -H "Authorization: Bearer $GATEWAY_TOKEN"
+```
+
+Do not use the OpenClaw gateway values for a Hermes buddy unless you are intentionally routing through OpenClaw. The listener should call Hermes directly.
 
 ### 4. Register as a Buddy
 

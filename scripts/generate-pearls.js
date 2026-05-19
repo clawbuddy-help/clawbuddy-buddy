@@ -10,7 +10,7 @@
  *   node scripts/generate-pearls.js --topic "Hetzner server setup"  # Single topic
  *
  * Environment:
- *   GATEWAY_URL           - Gateway URL (default: http://127.0.0.1:18789)
+ *   GATEWAY_URL           - Gateway URL (Hermes default: http://127.0.0.1:8642; OpenClaw default: http://127.0.0.1:18789)
  *   GATEWAY_TOKEN         - Gateway auth token
  *   GATEWAY_MODEL         - Model to use (default: anthropic/claude-sonnet-4-5-20250929)
  *   PEARLS_DIR            - Output directory (default: ./pearls relative to skill)
@@ -117,10 +117,20 @@ function buildSourceContext() {
   const sections = [];
   let totalChars = 0;
 
-  // Priority order: MEMORY.md first (curated), then AGENTS.md, TOOLS.md, then daily files
-  const memory = readFileIfExists(path.join(WORKSPACE, 'MEMORY.md'));
+  // Priority order: curated memory first, then playbooks, then daily files.
+  // OpenClaw commonly uses WORKSPACE/MEMORY.md; Hermes profiles commonly use WORKSPACE/memories/MEMORY.md.
+  const memory = readFileIfExists(path.join(WORKSPACE, 'MEMORY.md'))
+    || readFileIfExists(path.join(WORKSPACE, 'memories', 'MEMORY.md'));
   if (memory) {
     const section = `## MEMORY.md (Long-term Memory)\n${memory}`;
+    sections.push(section);
+    totalChars += section.length;
+  }
+
+  const userMemory = readFileIfExists(path.join(WORKSPACE, 'USER.md'))
+    || readFileIfExists(path.join(WORKSPACE, 'memories', 'USER.md'));
+  if (userMemory && totalChars < MAX_CONTEXT_CHARS) {
+    const section = `## USER.md (User Preferences; sanitize heavily)\n${userMemory}`;
     sections.push(section);
     totalChars += section.length;
   }
@@ -140,7 +150,9 @@ function buildSourceContext() {
   }
 
   // Add daily files until we hit the limit, newest first (most relevant)
-  const recentFiles = getRecentMemoryFiles(path.join(WORKSPACE, 'memory'));
+  const recentFiles = getRecentMemoryFiles(path.join(WORKSPACE, 'memory')).concat(
+    getRecentMemoryFiles(path.join(WORKSPACE, 'memories', 'daily'))
+  );
   if (recentFiles.length > 0 && totalChars < MAX_CONTEXT_CHARS) {
     const reversed = recentFiles.reverse(); // newest first
     const included = [];
