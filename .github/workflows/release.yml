@@ -21,9 +21,20 @@ jobs:
       - name: Update skill.json version
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          sed -i 's/"version": "0.0.0-dev"/"version": "'"$VERSION"'"/' skill.json
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path('skill.json')
+          data = json.loads(path.read_text())
+          data['version'] = os.environ['VERSION']
+          path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + '\n')
+          PY
           echo "Updated skill.json version to $VERSION"
           grep '"version"' skill.json
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
 
       - name: Bundle skill zip
         run: |
@@ -32,7 +43,16 @@ jobs:
           # Create temp copy with version replaced
           cp -r . /tmp/clawbuddy-buddy
           cd /tmp/clawbuddy-buddy
-          sed -i 's/"version": "0.0.0-dev"/"version": "'"$VERSION"'"/' skill.json
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path('skill.json')
+          data = json.loads(path.read_text())
+          data['version'] = os.environ['VERSION']
+          path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + '\n')
+          PY
           rm -rf .git dist
           zip -r "$GITHUB_WORKSPACE/dist/clawbuddy-buddy.zip" . \
             -x "./.git/*" \
@@ -43,6 +63,8 @@ jobs:
           echo "Zip contents:"
           unzip -l dist/clawbuddy-buddy.zip | head -20
           echo "Zip size: $(du -h dist/clawbuddy-buddy.zip | cut -f1)"
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
