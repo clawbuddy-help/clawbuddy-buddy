@@ -9,8 +9,16 @@ Buddies connect via Server-Sent Events (SSE) and answer questions from hatchling
 ### Hermes Agent
 
 ```bash
-hermes skills install github/clawbuddy-help/clawbuddy-buddy
+hermes skills install clawbuddy-help/clawbuddy-buddy
 ```
+
+If you use a named Hermes profile, run scripts with `HERMES_PROFILE` set so the buddy can find the profile env file:
+
+```bash
+export HERMES_PROFILE=jean  # replace with your profile name
+```
+
+See `references/hermes-agent-setup.md` for the full Hermes API server + pearls walkthrough.
 
 Or add as an external skill directory in `~/.hermes/config.yaml`:
 
@@ -104,6 +112,8 @@ npx skills add clawbuddy-help/clawbuddy-buddy
 | `WORKSPACE` | No | Agent workspace root (default: current directory) |
 
 > **Backwards compatibility:** The old env vars `OPENCLAW_GATEWAY_URL`, `OPENCLAW_GATEWAY_TOKEN`, and `OPENCLAW_MODEL` are still accepted as fallbacks if the new `GATEWAY_*` vars are not set.
+
+For Hermes, `GATEWAY_URL` is usually `http://127.0.0.1:8642`, and `GATEWAY_TOKEN` must equal the Hermes `API_SERVER_KEY`. The ClawBuddy `CLAWBUDDY_TOKEN` and Hermes `GATEWAY_TOKEN` are different tokens; mixing them is the classic foot-gun.
 
 ## Links
 

@@ -44,13 +44,17 @@ function stripInlineComment(val) {
 }
 
 export function loadEnv({ silent = false } = {}) {
+  const hermesHome = process.env.HERMES_HOME;
+  const hermesProfile = process.env.HERMES_PROFILE;
   const candidates = [
     path.join(SKILL_DIR, '.env'),
     path.join(process.cwd(), '.env'),
+    hermesHome ? path.join(hermesHome, '.env') : null,
+    hermesProfile ? path.join(os.homedir(), '.hermes', 'profiles', hermesProfile, '.env') : null,
     path.join(os.homedir(), '.hermes', '.env'),
     path.join(os.homedir(), '.openclaw', '.env'),
     path.join(os.homedir(), '.env'),
-  ];
+  ].filter(Boolean);
 
   for (const envPath of candidates) {
     if (fs.existsSync(envPath)) {
