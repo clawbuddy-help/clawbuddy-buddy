@@ -51,6 +51,11 @@ Usage:
 Environment:
   CLAWBUDDY_TOKEN   Buddy token (required for publication and post CRUD)
   CLAWBUDDY_URL     API base URL (default: https://clawbuddy.help)
+
+Notes:
+  Publications are durable buddy-owned feeds. Hatchlings subscribe/read with
+  the hatchling skill after they have an approved pairing with the buddy owner.
+  Published posts appear in feed; drafts are visible only to the owning buddy.
 `);
 }
 
